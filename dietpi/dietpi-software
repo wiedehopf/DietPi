@@ -8004,7 +8004,6 @@ _EOF_
 
 		if To_Install 201 zerotier-one # ZeroTier
 		then
-<<<<<<< HEAD
 			# APT key: Download from GitHub instead of https://download.zerotier.com/contact%40zerotier.com.gpg for enhanced protection against corrupted download server
 			local url='https://raw.githubusercontent.com/zerotier/ZeroTierOne/master/doc/contact%40zerotier.com.gpg'
 			G_CHECK_URL "$url"
@@ -8014,19 +8013,7 @@ _EOF_
 			local dist=${G_DISTRO_NAME/forky/trixie}
 			G_EXEC eval "echo 'deb https://download.zerotier.com/debian/$dist $dist main' > /etc/apt/sources.list.d/dietpi-zerotier.list"
 			G_AGUP
-=======
-			if [[ ! -f /etc/apt/sources.list.d/dietpi-zerotier.list ]]
-			then
-				# APT key: Download from GitHub instead of https://download.zerotier.com/contact%40zerotier.com.gpg for enhanced protection against corrupted download server
-				local url='https://raw.githubusercontent.com/zerotier/ZeroTierOne/master/doc/contact%40zerotier.com.gpg'
-				G_CHECK_URL "$url"
-				G_EXEC eval "curl -sSfL '$url' | gpg --dearmor -o /etc/apt/trusted.gpg.d/dietpi-zerotier.gpg --yes"
->>>>>>> 0670686a2 (Build pre-installed adsb.im ready images)
 
-				# APT list
-				G_EXEC eval "echo 'deb https://download.zerotier.com/debian/${G_DISTRO_NAME/trixie/bookworm} ${G_DISTRO_NAME/trixie/bookworm} main' > /etc/apt/sources.list.d/dietpi-zerotier.list"
-				G_AGUP
-			fi
 			# APT package
 			G_AGI zerotier-one
 
