@@ -169,6 +169,14 @@ Would you like to restart the first run setup and installation?"
 
 		# Proceed with 1st run setup
 		else
+			if [[ -f /opt/adsb/scripts/net-or-hotspot.sh ]]
+			then
+				echo "running the net-or-hotspot script" >> "$FP_DIETPI_FIRSTRUNSETUP_LOG"
+				/opt/adsb/scripts/net-or-hotspot.sh 2>&1 | tee -a "$FP_DIETPI_FIRSTRUNSETUP_LOG"
+			else
+				echo "can't find the net-or-hotspot script" >> "$FP_DIETPI_FIRSTRUNSETUP_LOG"
+			fi
+
 			# Prevent re-run from another session.
 			echo $$ > "$FP_DIETPI_FIRSTRUNSETUP_PID"
 			# - Always remove PID file when script is exited/terminated/killed
@@ -201,7 +209,7 @@ Let us know if you actually intend to run this system without journal. This chec
 			if (( $G_DIETPI_INSTALL_STAGE == 0 ))
 			then
 				# Start DietPi-Update
-				/boot/dietpi/dietpi-update 1 2>&1 | tee "$FP_DIETPI_FIRSTRUNSETUP_LOG" # Sets /boot/dietpi/.install_stage > G_DIETPI_INSTALL_STAGE=1
+				/boot/dietpi/dietpi-update 1 2>&1 | tee -a "$FP_DIETPI_FIRSTRUNSETUP_LOG" # Sets /boot/dietpi/.install_stage > G_DIETPI_INSTALL_STAGE=1
 
 				# Prompt on failure
 				(( $(</boot/dietpi/.install_stage) == 1 )) || Prompt_on_Failure
