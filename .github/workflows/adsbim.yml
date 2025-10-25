@@ -3,7 +3,7 @@ name: build images
 on:
   push:
     branches:
-      - "adsbim"
+      - "adsbim*"
 
 jobs:
   prepare:
