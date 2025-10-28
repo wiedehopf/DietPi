@@ -63,7 +63,7 @@ jobs:
       run: |
         mkdir -p uploads
         cd repository/.build/images
-        sudo G_GITOWNER=dirkhh G_GITBRANCH=adsbim G_ADSB_SHA=${{ github.sha }} ./dietpi-build -m ${{ env.DIETPI_MACHINE }} -d 7 -o dirkhh -b adsbim --preinst 141 --sizeincrement 600
+        sudo G_GITOWNER=wiedehopf G_GITBRANCH=dev G_ADSB_SHA=${{ github.sha }} ./dietpi-build -m ${{ env.DIETPI_MACHINE }} -d 7 -o wiedehopf -b dev --preinst 141 --sizeincrement 600
         mv DietPi*.img ../../../uploads
 
     - name: Compress img
