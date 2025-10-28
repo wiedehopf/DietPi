@@ -2422,6 +2422,53 @@ _EOF_
 
 		G_EXEC cp /var/lib/dietpi/.dietpi_image_version /boot/dietpi/.version
 
+		# adsb.im hack: install tailscale / zerotier software choices
+		echo 2 > /boot/dietpi/.install_stage
+		export G_HW_MODEL
+		export G_HW_ARCH
+		export G_DISTRO
+		export G_DISTRO_NAME
+		export G_RASPBIAN
+		/boot/dietpi/dietpi-software install 58 201
+		cat /boot/dietpi/.installed
+
+		# more stuff for the adsb.im image:
+		BLOCKED_MODULES=("rtl2832_sdr")
+		BLOCKED_MODULES+=("dvb_usb_rtl2832u")
+		BLOCKED_MODULES+=("dvb_usb_rtl28xxu")
+		BLOCKED_MODULES+=("dvb_usb_v2")
+		BLOCKED_MODULES+=("r820t")
+		BLOCKED_MODULES+=("rtl2830")
+		BLOCKED_MODULES+=("rtl2832")
+		BLOCKED_MODULES+=("rtl2838")
+		BLOCKED_MODULES+=("dvb_core")
+		echo -n "Getting the latest UDEV rules... "
+		mkdir -p /etc/udev/rules.d /etc/udev/hwdb.d
+		# First install the UDEV rules for RTL-SDR dongles
+		curl -sL -o /etc/udev/rules.d/rtl-sdr.rules https://raw.githubusercontent.com/wiedehopf/adsb-scripts/master/osmocom-rtl-sdr.rules
+		curl -sL -o /etc/udev/rules.d/dump978-fa.rules https://raw.githubusercontent.com/flightaware/dump978/master/debian/dump978-fa.udev
+		# Now install the UDEV rules for SDRPlay devices
+		curl -sL -o /etc/udev/rules.d/66-mirics.rules https://raw.githubusercontent.com/sdr-enthusiasts/install-libsdrplay/main/66-mirics.rules
+		curl -sL -o /etc/udev/hwdb.d/20-sdrplay.hwdb https://raw.githubusercontent.com/sdr-enthusiasts/install-libsdrplay/main/20-sdrplay.hwdb
+		# Next, exclude the drivers so the dongles stay accessible
+		echo -n "blacklisting kernel modules "
+		for module in "${BLOCKED_MODULES[@]}"
+		do
+			echo blacklist "$module" >>/etc/modprobe.d/exclusions-rtl2832.conf
+			echo install "$module" /bin/false >>/etc/modprobe.d/exclusions-rtl2832.conf
+		done
+
+		# acpid
+		apt-get install -y --no-install-recommends acpid
+
+		# install acpid and configure the power button to perform a clean shutdown
+		cat > /etc/acpi/events/power_button <<EOF
+event=button/power PBTN 00000080 00000000
+action=/usr/sbin/poweroff
+EOF
+
+		# adsb.im hack end
+
 		G_DIETPI-NOTIFY 2 'Set init .install_stage to -1 (first boot)'
 		echo -1 > /boot/dietpi/.install_stage
 
