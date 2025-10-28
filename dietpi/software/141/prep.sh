@@ -35,13 +35,10 @@ then
     [[ $G_HW_MODEL == [45] ]] && ADD_PKGS=(binutils binutils-aarch64-linux-gnu binutils-common libbinutils libctf-nobfd0 libctf0 libgprofng0 libjansson4 libpci3 pci.ids pciutils python3-pycryptodome rpi-eeprom)
     # setup python, git, zerotier, tailscale, rtl-sdr and the rpi-eeprom dependencies (if needed)
     G_AGI python3 python3-flask python3-requests git zerotier-one tailscale librtlsdr0 rtl-sdr hostapd isc-dhcp-server less avahi-utils "${ADD_PKGS[@]}"
-    # do the pip install dance
-    # shellcheck disable=SC1091
-    source "/boot/dietpi/software/130/prep.sh"
     # now get docker
     # shellcheck disable=SC1091
     source "/boot/dietpi/software/162/prep.sh"
-    # and docker compose (which requires pip)
+    # and docker compose
     apt install -y --no-install-recommends docker-compose-plugin
 
     # next clone the feeder image and put the files in place, but don't complete running the install
