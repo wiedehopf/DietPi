@@ -63,6 +63,8 @@ RK35XX_MAINLINE=0
 # initial rootfs size override. dietpi-imager will shrink it as much as possible, but the larger the initial rootfs size, the larger the resulting image.
 # See "root_size" below for per-SBC defaults, which may not work with all combinations of options, and are updated regularly.
 ROOT_SIZE=
+SIZE_INCREMENT=0
+ONLY_CREATE_VMS=0
 while (( $# ))
 do
 	case $1 in
@@ -84,6 +86,8 @@ do
 		'--test-uboot') TEST_UBOOT=1;;
 		'--root-size') shift; ROOT_SIZE=$1;;
 		'--rk35xx-mainline') RK35XX_MAINLINE=1;;
+		'--sizeincrement') shift; SIZE_INCREMENT=$1;;
+		'--createvms') shift; ONLY_CREATE_VMS=1;;
 		*) Error_Exit "Invalid input \"$1\"";;
 	esac
 	shift
@@ -229,8 +233,16 @@ case $PTTYPE in
 	*) Error_Exit "Invalid partition table type \"$PTTYPE\" passed";;
 esac
 
+# Make sure we add space that was requested on the command line
+((root_size+=$SIZE_INCREMENT))
+
+# Do not add trailing FAT partitions for VM, container and (Clonezilla) installer images, and if there is a boot FAT partition already
+[[ $HW_MODEL == 20 || $HW_MODEL == 75 || $VARIANT == 'iso' ]] && ADD_DOS_PART=0
+[[ $boot_size -gt 0 && $boot_fstype == 'fat'* ]] && ADD_DOS_PART=0
+
 # Check for valid root filesystem type and set variables accordingly
 fsname='' afspackages=() afs_opts=() afsck=() aresize=() apackages=()
+
 case $FSTYPE in
 	'ext4') afspackages+=('e2fsprogs') afs_opts=('-e' 'remount-ro' '-O' '^has_journal') afsck=('e2fsck' '-fyD') aresize=('resize2fs');;
 	'f2fs') fsname='F2FS' afspackages+=('f2fs-tools') afsck=('fsck.f2fs' '-f') aresize=('resize.f2fs'); uname -r | grep -q '\-azure$' && apackages+=("linux-modules-extra-$(uname -r)");;
@@ -258,6 +270,8 @@ then
 fi
 [[ $SUFFIX ]] && OUTPUT_IMG_NAME+="_$SUFFIX"
 
+if [[ $ONLY_CREATE_VMS == 0 ]]
+then
 ##########################################
 # Dependencies
 ##########################################
@@ -297,7 +311,7 @@ G_EXIT_CUSTOM(){
 	findmnt "$FP_ORIGIN/rootfs" &> /dev/null && G_EXEC umount -R "$FP_ORIGIN/rootfs"
 	[[ -d $FP_ORIGIN/rootfs ]] && G_EXEC rmdir "$FP_ORIGIN/rootfs"
 	[[ $FP_LOOP ]] && losetup "$FP_LOOP" &> /dev/null && G_EXEC losetup -d "$FP_LOOP"
-	[[ -f $OUTPUT_IMG_NAME.img ]] && G_EXEC rm "$OUTPUT_IMG_NAME.img"
+	[[ $SKIP_ARCHIVE = 0 ]] && [[ -f $OUTPUT_IMG_NAME.img ]] && G_EXEC rm "$OUTPUT_IMG_NAME.img"
 }
 
 # Create image file
@@ -429,18 +443,23 @@ _EOF_
 ##########################################
 # login is not "essential" anymore since Trixie, hence "mmdebstrap --variant apt" (essential + apt) does not install it. It is still "required", hence cannot be commonly removed, but we need to install it actively once.
 packages='apt,bash-completion,ca-certificates,cron,curl,fdisk,gpg,htop,iputils-ping,locales,login,mawk,mount,nano,parted,procps,psmisc,sudo,systemd-sysv,tzdata,udev,wget,whiptail,'
+packages+=',bzip2,unzip,'
 IFS=, packages+=${afspackages[*]}; unset -v IFS
+(( $DISTRO > 7 )) && packages+=',7zip,' || packages+=',p7zip,'
+[[ $HW_MODEL == 21 ]] && packages+=',initramfs-tools,zstd,'
 [[ $HW_MODEL == 75 ]] && packages+=',iproute2' || packages+=',console-setup,dropbear,ethtool,fake-hwclock,ifupdown,kmod,rfkill,systemd-timesyncd,usbutils'
 # DHCP client: isc-dhcp-client has been removed from Forky, so we use dhcpcd for now, like BusyBox's udhcpc after https://salsa.debian.org/debian/ifupdown/-/merge_requests/29.
 (( $DISTRO < 9 )) && packages+=',isc-dhcp-client' || packages+=',dhcpcd-base'
 [[ $HW_MODEL =~ ^(20|75)$ ]] || packages+=',iw,wpasupplicant,wireless-regdb'
+# now that we are done here, remove consecutive commas and replace them with a single comma
+packages=$(tr -s ',' <<< "$packages" | sed 's/,$//')
 # Add temporary tmpfs mounts to prevent certain files created by debootstrap being written to disk
-# - tmpfs mounts have 1777 mode by default.
-G_EXEC mount -m -t tmpfs tmpfs rootfs/dev
-G_EXEC mount -m -t tmpfs tmpfs rootfs/run
-G_EXEC mount -m -t tmpfs tmpfs rootfs/var/cache/apt
-G_EXEC mount -m -t tmpfs tmpfs rootfs/var/lib/apt/lists
-G_EXEC mount -m -t tmpfs tmpfs rootfs/var/log
+# - "-o X-mount.mkdir" has a shortcut "-m" in recent "mount", but not available on Ubuntu Jammy yet!
+G_EXEC mount -o X-mount.mkdir -t tmpfs tmpfs rootfs/dev
+G_EXEC mount -o X-mount.mkdir -t tmpfs tmpfs rootfs/run
+G_EXEC mount -o X-mount.mkdir -t tmpfs tmpfs rootfs/var/cache/apt
+G_EXEC mount -o X-mount.mkdir -t tmpfs tmpfs rootfs/var/lib/apt/lists
+G_EXEC mount -o X-mount.mkdir -t tmpfs tmpfs rootfs/var/log
 # - "--skip=check/empty" to ignore /etc/fstab, boot and tmpfs mounts we added above
 # - "--skip=check/qemu" to skip arch test, which requires the "arch-test" package. We however assure emulation support our end.
 G_EXEC_OUTPUT=1 G_EXEC mmdebstrap --mode=root --format=dir --skip=check/empty,check/qemu --variant=apt --include="$packages" --arch="$parch" --keyring="$keyring" "$distro" ./rootfs "${mirrors[@]}"
@@ -485,6 +504,8 @@ cat << _EOF_ > rootfs/dietpi-build.sh || exit 1
 #!/bin/dash -e
 {
 infocmp "\$TERM" > /dev/null 2>&1 || { echo "[ WARN ] Unsupported TERM=\"\$TERM\", switching to TERM=\"dumb\""; export TERM=dumb; }
+echo '[ INFO ] Running DietPi-Installer...'
+cat /dietpi-build.sh
 export GITOWNER='$GITOWNER' GITBRANCH='$GITBRANCH' HW_MODEL='$HW_MODEL' IMAGE_CREATOR=0 PREIMAGE_INFO=0 WIFI_REQUIRED=1 DISTRO_TARGET=$DISTRO TEST_KERNEL=$TEST_KERNEL TEST_UBOOT=$TEST_UBOOT RK35XX_MAINLINE=$RK35XX_MAINLINE TMPDIR='/tmp'
 echo '[ INFO ] Running DietPi-Installer for $G_GITOWNER/$G_GITBRANCH'
 bash -c "\$(curl -sSf 'https://raw.githubusercontent.com/$G_GITOWNER/DietPi/$G_GITBRANCH/.build/images/dietpi-installer' || echo false)" || { echo '[FAILED] DietPi-Installer failed, shutting down ...'; journalctl -n 25; df -h; free -h; exit 1; }
@@ -538,6 +559,9 @@ G_EXEC losetup -d "$FP_LOOP"
 # Do not add trailing FAT partition for VM, container and ISO installer images, and if there is a boot FAT partition already
 [[ $HW_MODEL =~ ^(20|75)$ || $VARIANT == 'iso' || ( $boot_size -gt 0 && $boot_fstype == 'vfat' ) ]] && ADD_FAT_PART=0
 export FP_ROOT_DEV CLONING_TOOL OUTPUT_IMG_NAME MOUNT_IT='Off' SKIP_FIRSTBOOT_RESIZE=1
+# don't waste the time on compressing the image
+# not sure this code is used for the adsb.im dietpi build or if it can go
+export SKIP_ARCHIVE=1
 IMAGER_ARGS=("$OUTPUT_IMG_NAME.img")
 (( $SKIP_ARCHIVE )) && IMAGER_ARGS+=('--skip-archive')
 [[ $UPLOAD_SCRIPT ]] && IMAGER_ARGS+=('--upload-script' "$UPLOAD_SCRIPT")
@@ -757,6 +781,7 @@ _EOF_
 	G_DIETPI-NOTIFY 2 "Running DietPi-Imager from $G_GITOWNER/$G_GITBRANCH to generate $OUTPUT_IMG_NAME.img"
 	bash -c "$(curl -sSf "https://raw.githubusercontent.com/$G_GITOWNER/DietPi/$G_GITBRANCH/.build/images/dietpi-imager")" 'DietPi-Imager' "${IMAGER_ARGS[@]}" || { journalctl -n 25; exit 1; }
 fi
+fi # ONLY_CREATE_VMS
 
 [[ $HW_MODEL == 20 && ! $VARIANT =~ ^(|iso)$ ]] || exit 0
 
@@ -765,7 +790,7 @@ fi
 ##########################################
 
 # Since qemu-img does not support VMDK and VHDX resizing, we need to resize the raw .img. It is usually done as sparse file, hence the actual disk usage does not change.
-G_EXEC qemu-img resize "$OUTPUT_IMG_NAME.img" 8G
+G_EXEC qemu-img resize "$OUTPUT_IMG_NAME.img" 16G
 
 ####### VMX/VMware/Parallels #############
 if [[ $VARIANT =~ ^(vmx|all)$ ]]
@@ -818,7 +843,7 @@ ethernet0.present = "TRUE"
 extendedConfigFile = "$image_name.vmxf"
 floppy0.present = "FALSE"
 _EOF_
-	G_EXEC_DESC='Creating VMware tar.xz archive' XZ_OPT='-9e -T0 -M75%' G_EXEC tar -cJf "$image_name.tar.xz" "$image_name.vmdk" "$image_name.vmx"
+	G_EXEC_DESC='Creating VMware tar.xz archive' XZ_OPT='-1 -T0 -M75%' G_EXEC tar -cJf "$image_name.tar.xz" "$image_name.vmdk" "$image_name.vmx"
 	G_EXEC rm "$image_name.vmdk" "$image_name.vmx"
 	G_EXEC_DESC='Generating SHA256 hash' G_EXEC eval "sha256sum '$image_name.tar.xz' > '$image_name.tar.xz.sha256'"
 	signature=()
@@ -947,7 +972,7 @@ _EOF_
 	[[ $VARIANT == 'all' ]] || G_EXEC rm "$image_name.vmdk"
 	G_EXEC rm "$image_name."{ovf,mf}
 
-	G_EXEC_DESC='Creating ESXi xz archive' G_EXEC xz -9e -T0 -M75% "$image_name.ova"
+	G_EXEC_DESC='Creating ESXi xz archive' G_EXEC xz -1 -T0 -M75% "$image_name.ova"
 	G_EXEC_DESC='Generating SHA256 hash' G_EXEC eval "sha256sum '$image_name.ova.xz' > '$image_name.ova.xz.sha256'"
 	signature=()
 	[[ $SIGN_PASS ]] && { G_DIETPI-NOTIFY 2 'Signing archive ...'; gpg --batch --pinentry-mode loopback --passphrase "$SIGN_PASS" -b --armor "$image_name.ova.xz" || exit 1; signature=("$image_name.ova.xz.asc"); }
@@ -1098,7 +1123,7 @@ _EOF_
 	G_EXEC tar -cf "$image_name.ova" "$image_name."{ovf,vmdk,mf}
 	G_EXEC rm "$image_name."{ovf,vmdk,mf}
 
-	G_EXEC_DESC='Creating VirtualBox xz archive' G_EXEC xz -9e -T0 -M75% "$image_name.ova"
+	G_EXEC_DESC='Creating VirtualBox xz archive' G_EXEC xz -1 -T0 -M75% "$image_name.ova"
 	G_EXEC_DESC='Generating SHA256 hash' G_EXEC eval "sha256sum '$image_name.ova.xz' > '$image_name.ova.xz.sha256'"
 	signature=()
 	[[ $SIGN_PASS ]] && { G_DIETPI-NOTIFY 2 'Signing archive ...'; gpg --batch --pinentry-mode loopback --passphrase "$SIGN_PASS" -b --armor "$image_name.ova.xz" || exit 1; signature=("$image_name.ova.xz.asc"); }
@@ -1112,7 +1137,7 @@ then
 	# Convert raw image to VHDX
 	G_EXEC qemu-img convert -O vhdx "$OUTPUT_IMG_NAME.img" "$image_name.vhdx"
 
-	G_EXEC_DESC='Creating Hyper-V xz archive' G_EXEC xz -9e -T0 -M75% "$image_name.vhdx"
+	G_EXEC_DESC='Creating Hyper-V xz archive' G_EXEC xz -1 -T0 -M75% "$image_name.vhdx"
 	G_EXEC_DESC='Generating SHA256 hash' G_EXEC eval "sha256sum '$image_name.vhdx.xz' > '$image_name.vhdx.xz.sha256'"
 	signature=()
 	[[ $SIGN_PASS ]] && { G_DIETPI-NOTIFY 2 'Signing archive ...'; gpg --batch --pinentry-mode loopback --passphrase "$SIGN_PASS" -b --armor "$image_name.vhdx.xz" || exit 1; signature=("$image_name.vhdx.xz.asc"); }
@@ -1277,7 +1302,7 @@ _EOF_
 </dict>
 </plist>
 _EOF_
-	G_EXEC_DESC='Creating UTM tar.xz archive' XZ_OPT='-9e -T0 -M75%' G_EXEC tar -cJf "$image_name.tar.xz" "$image_name.utm"
+	G_EXEC_DESC='Creating UTM tar.xz archive' XZ_OPT='-1 -T0 -M75%' G_EXEC tar -cJf "$image_name.tar.xz" "$image_name.utm"
 	G_EXEC rm -R "$image_name.utm"
 	G_EXEC_DESC='Generating SHA256 hash' G_EXEC eval "sha256sum '$image_name.tar.xz' > '$image_name.tar.xz.sha256'"
 	signature=()
@@ -1292,7 +1317,7 @@ then
 	image_name=${OUTPUT_IMG_NAME/_VM-/_Proxmox-}
 	G_EXEC qemu-img convert -c -O qcow2 "$OUTPUT_IMG_NAME.img" "$image_name.qcow2"
 
-	G_EXEC_DESC='Creating Proxmox xz archive' G_EXEC xz -9e -T0 -M75% "$image_name.qcow2"
+	G_EXEC_DESC='Creating Proxmox xz archive' G_EXEC xz -1 -T0 -M75% "$image_name.qcow2"
 	G_EXEC_DESC='Generating SHA256 hash' G_EXEC eval "sha256sum '$image_name.qcow2.xz' > '$image_name.qcow2.xz.sha256'"
 	signature=()
 	[[ $SIGN_PASS ]] && { G_DIETPI-NOTIFY 2 'Signing archive ...'; gpg --batch --pinentry-mode loopback --passphrase "$SIGN_PASS" -b --armor "$image_name.qcow2.xz" || exit 1; signature=("$image_name.qcow2.xz.asc"); }
