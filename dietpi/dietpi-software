@@ -3609,7 +3609,7 @@ _EOF_'
 			esac
 
 			# Download binary
-			local fallback_url="https://github.com/prometheus/node_exporter/releases/download/v1.9.1/node_exporter-1.9.1.linux-$arch.tar.gz"
+			local fallback_url="https://github.com/prometheus/node_exporter/releases/download/v1.10.2/node_exporter-1.10.2.linux-$arch.tar.gz"
 			Download_Install "$(curl -sSfL 'https://api.github.com/repos/prometheus/node_exporter/releases/latest' | mawk -F\" "/^ *\"browser_download_url\": \".*\/node_exporter-.*\.linux-$arch\.tar\.gz\"$/{print \$4}")"
 			G_EXEC mkdir -p /opt/node_exporter
 			G_EXEC cp --preserve=mode node_exporter*/node_exporter /opt/node_exporter/
@@ -6435,7 +6435,7 @@ _EOF_
 				*) local arch='x64';;
 			esac
 
-			local fallback_url="https://github.com/Kareadita/Kavita/releases/download/v0.8.7/kavita-linux-$arch.tar.gz"
+			local fallback_url="https://github.com/Kareadita/Kavita/releases/download/v0.8.8.3/kavita-linux-$arch.tar.gz"
 			Download_Install "$(curl -sSfL 'https://api.github.com/repos/Kareadita/Kavita/releases/latest' | mawk -F\" "/^ *\"browser_download_url\": \".*\/kavita-linux-$arch\.tar\.gz\"$/{print \$4}")"
 			G_EXEC chmod +x Kavita/Kavita
 
@@ -7087,7 +7087,7 @@ _EOF_
 
 			# Obtain latest version: Stick with v3. Once v4 is released, we will surely need to adjust below code.
 			local url=$(curl -sSfL 'https://www.haproxy.org/' | grep -Po '(?<=href=")/download/3\..*/src/haproxy-.*\.tar\.gz(?=")' | head -1)
-			local fallback_url='https://www.haproxy.org/download/3.2/src/haproxy-3.2.6.tar.gz'
+			local fallback_url='https://www.haproxy.org/download/3.2/src/haproxy-3.2.7.tar.gz'
 			Download_Install "${url:+https://www.haproxy.org$url}"
 
 			# Compile
@@ -7194,7 +7194,7 @@ _EOF_
 				local fallback_url='https://downloads.lms-community.org/nightly/lyrionmusicserver_9.1.0~1752577284_arm.deb'
 				Download_Install "$(curl -sSfL 'https://raw.githubusercontent.com/LMS-Community/lms-server-repository/master/dev.xml' | grep -om1 'https://[^"]*_arm.deb')"
 			else
-				local fallback_url="https://downloads.lms-community.org/nightly/lyrionmusicserver_9.0.4~1759678152_$arch.deb"
+				local fallback_url="https://downloads.lms-community.org/nightly/lyrionmusicserver_9.0.4~1760847989_$arch.deb"
 				Download_Install "$(curl -sSfL 'https://raw.githubusercontent.com/LMS-Community/lms-server-repository/master/stable.xml' | grep -om1 "https://[^\"]*_$arch.deb")"
 			fi
 			G_EXEC systemctl stop lyrionmusicserver
@@ -9598,7 +9598,7 @@ _EOF_
 			if (( ${PHP_VERSION::1} > 7 ))
 			then
 				aDEPS+=("php$PHP_VERSION-curl")
-				local fallback_url='https://github.com/koel/koel/releases/download/v7.15.1/koel-v7.15.1.tar.gz' aphp_deps=('curl' 'dom')
+				local fallback_url='https://github.com/koel/koel/releases/download/v8.1.0/koel-v8.1.0.tar.gz' aphp_deps=('curl' 'dom')
 				Download_Install "$(curl -sSfL 'https://api.github.com/repos/koel/koel/releases/latest' | mawk -F\" '/^ *"browser_download_url": ".*\/koel-[^"\/]*\.tar\.gz"$/{print $4}')"
 			else
 				aDEPS+=("php$PHP_VERSION-json")
@@ -10120,7 +10120,7 @@ _EOF_
 				3) local arch='LinuxARM64';;
 				*) local arch='LinuxAMDx64';;
 			esac
-			local fallback_url="https://github.com/Jackett/Jackett/releases/download/v0.24.156/Jackett.Binaries.$arch.tar.gz"
+			local fallback_url="https://github.com/Jackett/Jackett/releases/download/v0.24.200/Jackett.Binaries.$arch.tar.gz"
 			Download_Install "$(curl -sSfL 'https://api.github.com/repos/Jackett/Jackett/releases/latest' | mawk -F\" "/^ *\"browser_download_url\": \".*\/Jackett\.Binaries\.$arch\.tar\.gz\"$/{print \$4}")"
 
 			# Move existing configs to unpacked install dir
@@ -10248,7 +10248,7 @@ _EOF_
 				3) local arch='arm64';;
 				*) local arch='x64';;
 			esac
-			local fallback_url="https://github.com/Prowlarr/Prowlarr/releases/download/v2.0.5.5160/Prowlarr.master.2.0.5.5160.linux-core-$arch.tar.gz"
+			local fallback_url="https://github.com/Prowlarr/Prowlarr/releases/download/v2.1.5.5216/Prowlarr.master.2.1.5.5216.linux-core-$arch.tar.gz"
 			Download_Install "$(curl -sSfL 'https://api.github.com/repos/Prowlarr/Prowlarr/releases/latest' | mawk -F\" "/^ *\"browser_download_url\": \".*linux-core-$arch\.tar\.gz\"$/{print \$4}")"
 
 			# Install: Remove previous instance on reinstall
@@ -10802,7 +10802,7 @@ _EOF_
 				*) local arch='arm-6';;
 			esac
 
-			local fallback_url="https://github.com/go-gitea/gitea/releases/download/v1.24.6/gitea-1.24.6-linux-$arch.xz"
+			local fallback_url="https://github.com/go-gitea/gitea/releases/download/v1.24.7/gitea-1.24.7-linux-$arch.xz"
 			Download_Install "$(curl -sSfL 'https://api.github.com/repos/go-gitea/gitea/releases/latest' | mawk -F\" "/^ *\"browser_download_url\": \".*\/gitea-[^\"\/]*-linux-$arch\.xz\"$/{print \$4}")" /mnt/dietpi_userdata/gitea/gitea
 
 			# User
@@ -10853,7 +10853,7 @@ _EOF_
 			# Bullseye: Forgejo 13 requires Git >=2.34.1: https://codeberg.org/forgejo/forgejo/pulls/8328. This is also practically true, the daemon fails right after initial web UI setup steps.
 			if (( $G_DISTRO > 6 ))
 			then
-				local fallback_url="https://codeberg.org/forgejo/forgejo/releases/download/v13.0.1/forgejo-13.0.1-linux-$arch.xz"
+				local fallback_url="https://codeberg.org/forgejo/forgejo/releases/download/v13.0.2/forgejo-13.0.2-linux-$arch.xz"
 				Download_Install "$(curl -sSfL 'https://codeberg.org/api/v1/repos/forgejo/forgejo/releases/latest' | mawk -v RS=, -F\" "/^\"browser_download_url\":\".*-linux-$arch\.xz\"$/{print \$4;exit}")" /mnt/dietpi_userdata/forgejo/forgejo
 			else
 				local fallback_url="https://codeberg.org/forgejo/forgejo/releases/download/v12.0.4/forgejo-12.0.4-linux-$arch.xz"
@@ -11641,7 +11641,7 @@ _EOF_
 					*) local arch='amd64';;
 				esac
 
-				local fallback_url="https://github.com/rclone/rclone/releases/download/v1.71.1/rclone-v1.71.1-linux-$arch.deb"
+				local fallback_url="https://github.com/rclone/rclone/releases/download/v1.71.2/rclone-v1.71.2-linux-$arch.deb"
 				Download_Install "$(curl -sSfL 'https://api.github.com/repos/rclone/rclone/releases/latest' | mawk -F\" "/^ *\"browser_download_url\": \".*\/rclone-v[^\"\/]*-linux-$arch.deb\"$/{print \$4}")"
 			fi
 		fi
@@ -11772,7 +11772,7 @@ _EOF_
 				*) local arch='amd64';;
 			esac
 
-			local fallback_url="https://github.com/filebrowser/filebrowser/releases/download/v2.44.1/linux-$arch-filebrowser.tar.gz"
+			local fallback_url="https://github.com/filebrowser/filebrowser/releases/download/v2.44.2/linux-$arch-filebrowser.tar.gz"
 			Download_Install "$(curl -sSfL 'https://api.github.com/repos/filebrowser/filebrowser/releases/latest' | mawk -F\" "/^ *\"browser_download_url\": \".*\/linux-$arch-filebrowser\.tar\.gz\"$/{print \$4}")" ./filebrowser/
 
 			# Reinstall
