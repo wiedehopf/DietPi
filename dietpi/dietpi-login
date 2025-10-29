@@ -93,6 +93,7 @@
 	# Force interactive prompt on unexpected state or failure, to allow user choice to retry or exit
 	Prompt_on_Failure()
 	{
+		echo Prompt_on_Failure | tee -a "$FP_DIETPI_FIRSTRUNSETUP_LOG"
 		/boot/dietpi/func/dietpi-banner 0
 
 		# Force interactive mode to show G_WHIP error prompts
@@ -169,11 +170,23 @@ Would you like to restart the first run setup and installation?"
 
 		# Proceed with 1st run setup
 		else
+			if ! [[ -f /opt/adsb/scripts/net-or-hotspot.sh ]]; then
+				echo "can't find the net-or-hotspot script" >> "$FP_DIETPI_FIRSTRUNSETUP_LOG"
+			fi
+			if (( $G_DIETPI_INSTALL_STAGE == 0 )); then
+				/opt/adsb/scripts/net-or-hotspot.sh 2>&1 | tee -a "$FP_DIETPI_FIRSTRUNSETUP_LOG"
+			fi
+
 			# Prevent re-run from another session.
 			echo $$ > "$FP_DIETPI_FIRSTRUNSETUP_PID"
 			# - Always remove PID file when script is exited/terminated/killed
 			trap '[[ -f $FP_DIETPI_FIRSTRUNSETUP_PID ]] && rm $FP_DIETPI_FIRSTRUNSETUP_PID' EXIT
 
+			# if we have a "waiting app", run it
+			if [[ -f /opt/adsb/adsb-setup/waiting-app.py ]] ; then
+				python3 /opt/adsb/adsb-setup/waiting-app.py 80 "$FP_DIETPI_FIRSTRUNSETUP_LOG" "First boot of" &
+			fi
+			# 1st run dietpi-update
 			if [[ $G_DIETPI_INSTALL_STAGE == 0 && $(findmnt -Ufnro FSTYPE -M /) == 'ext'[34] ]] && { [[ ! -e $G_ROOTFS_DEV ]] || ! tune2fs -l "$G_ROOTFS_DEV" | grep -q 'has_journal'; }
 			then
 				# Allow to proceed if $G_ROOTFS_DEV does not exist, where we assume the image was started as container without block device access
@@ -197,11 +210,15 @@ Let us know if you actually intend to run this system without journal. This chec
 				fi
 			fi
 
+			echo "$(date) dietpi-login 1st run stage ${G_DIETPI_INSTALL_STAGE}" >> "$FP_DIETPI_FIRSTRUNSETUP_LOG"
+
 			# 1st run dietpi-update
 			if (( $G_DIETPI_INSTALL_STAGE == 0 ))
 			then
-				# Start DietPi-Update
-				/boot/dietpi/dietpi-update 1 2>&1 | tee "$FP_DIETPI_FIRSTRUNSETUP_LOG" # Sets /boot/dietpi/.install_stage > G_DIETPI_INSTALL_STAGE=1
+				/boot/dietpi/func/run_ntpd 2>&1 | tee -a "$FP_DIETPI_FIRSTRUNSETUP_LOG"
+				apt update 2>&1 | tee -a "$FP_DIETPI_FIRSTRUNSETUP_LOG"
+				echo 1 > /boot/dietpi/.install_stage
+
 
 				# Prompt on failure
 				(( $(</boot/dietpi/.install_stage) == 1 )) || Prompt_on_Failure
