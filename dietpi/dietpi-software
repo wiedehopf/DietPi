@@ -14526,6 +14526,8 @@ _EOF_
 		G_NOTIFY_3_MODE='Step'
 
 		G_DIETPI-NOTIFY 3 "$G_PROGRAM_NAME" 'Applying initial first run setup steps'
+		# this gets called right after dietpi-update - no need to run apt update again
+		export SKIP_APT_UPDATE=1
 
 		# Get settings
 		AUTOINSTALL_ENABLED=$(grep -cm1 '^[[:blank:]]*AUTO_SETUP_AUTOMATED=1' /boot/dietpi.txt)
@@ -14625,7 +14627,8 @@ _EOF_
 		Check_Net_and_Time_sync
 
 		# Full package upgrade on first run installs: https://github.com/MichaIng/DietPi/issues/3098
-		if [[ ! -f '/boot/dietpi/.skip_distro_upgrade' ]]
+		# we don't want this for the adsb.im feeder image, check /boot and /boot/firmware for the readme
+		if [[ ! -f '/boot/dietpi/.skip_distro_upgrade' && ! -f '/boot/ADSB-README.txt' && ! -f '/boot/firmware/ADSB-README.txt' ]]
 		then
 			G_AGUP
 			G_AGDUG
@@ -14772,7 +14775,7 @@ _EOF_
 		# RPi 4/5 EEPROM update: https://github.com/MichaIng/DietPi/issues/3217
 		elif [[ $G_HW_MODEL == [45] ]]
 		then
-			/boot/dietpi/func/dietpi-set_hardware rpi-eeprom
+			/boot/dietpi/func/dietpi-set_hardware -no-agup rpi-eeprom
 		fi
 
 		# Install GPU driver if set
