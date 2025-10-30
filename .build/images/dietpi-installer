@@ -2410,6 +2410,22 @@ _EOF_
 
 		G_EXEC cp /var/lib/dietpi/.dietpi_image_version /boot/dietpi/.version
 
+		# adsb.im: install various things
+		# pretend this is a fully installed system so dietpi-software works, this is reset
+		# immediately after the adsb.im block
+		echo 2 > /boot/dietpi/.install_stage
+		export G_HW_MODEL
+		export G_HW_ARCH
+		export G_DISTRO
+		export G_DISTRO_NAME
+		export G_RASPBIAN
+
+		G_EXEC /boot/dietpi/adsb.im-dietpi-installer-hook.sh
+
+		df -h / /tmp # debug
+
+		# adsb.im end
+
 		G_DIETPI-NOTIFY 2 'Set init .install_stage to -1 (first boot)'
 		echo -1 > /boot/dietpi/.install_stage
 
