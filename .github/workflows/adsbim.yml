@@ -35,6 +35,9 @@ jobs:
     env:
       IMG_NAME: ${{ matrix.name }}
       DIETPI_MACHINE: ${{ matrix.dietpi_machine }}
+      G_GITOWNER: ${{ github.repository_owner }}
+      G_GITBRANCH: ${{ github.ref_name }}
+      G_ADSB_SHA: ${{ github.sha }}
 
     steps:
     - name: Checkout Project Repository again with the new tag - and make sure we have the full history for the version code
@@ -64,7 +67,7 @@ jobs:
       run: |
         mkdir -p uploads
         cd repository/.build/images
-        sudo G_GITOWNER=dirkhh G_GITBRANCH=adsbim G_ADSB_SHA=${{ github.sha }} ./dietpi-build -m ${{ env.DIETPI_MACHINE }} -d 7 -o dirkhh -b adsbim --sizeincrement 600
+        sudo G_GITOWNER=${{ env.G_GITOWNER }}  G_GITBRANCH=${{ env.G_GITBRANCH }} ./dietpi-build -m ${{ env.DIETPI_MACHINE }} -d 7 -o ${{ env.G_GITOWNER }} -b ${{ env.G_GITBRANCH }} --sizeincrement 600
         mv DietPi*.img ../../../uploads
 
     - name: Compress img
@@ -80,6 +83,6 @@ jobs:
     - name: Upload to GitHub as release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: latest
+        tag_name: ${{ github.ref_name }}
         files: uploads/*
 
