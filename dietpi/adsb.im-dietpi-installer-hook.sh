@@ -1,20 +1,9 @@
 #!/bin/bash
 
-# 58 tailscale
-# 201 zerotier
 # 162 docker
 # 134 docker-compose-plugin
-/boot/dietpi/dietpi-software install 58 201 162 134
+/boot/dietpi/dietpi-software install 162 134
 cat /boot/dietpi/.installed
-
-# disable and mask tailscale / zerotier
-systemctl disable zerotier-one.service tailscaled.service
-systemctl mask zerotier-one tailscaled
-
-# Disable telemetry for tailscale but only if it's not already there
-if ! grep -q -- "^FLAGS=\"--no-logs-no-support" /etc/default/tailscaled ; then
-	sed -i 's/FLAGS=\"/FLAGS=\"--no-logs-no-support /' /etc/default/tailscaled
-fi
 
 ADD_PKGS=()
 # on pi4/5, on boot dietpi-software will do stuff for the rpi-eerpom which needs extra packages
