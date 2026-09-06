@@ -88,7 +88,7 @@ jobs:
       run: |
         mkdir -p uploads
         cd repository/.build/images
-        sudo G_GITOWNER=${{ env.G_GITOWNER }}  G_GITBRANCH=${{ env.G_GITBRANCH }} ./dietpi-build -m ${{ env.DIETPI_MACHINE }} -d 7 -o ${{ env.G_GITOWNER }} -b ${{ env.G_GITBRANCH }} --sizeincrement 600
+        sudo G_GITOWNER=${{ env.G_GITOWNER }}  G_GITBRANCH=${{ env.G_GITBRANCH }} ./dietpi-build -m ${{ env.DIETPI_MACHINE }} -d 8 -o ${{ env.G_GITOWNER }} -b ${{ env.G_GITBRANCH }} --sizeincrement 600
         mv DietPi*.img ../../../uploads
 
     - name: Compress img
