@@ -2482,6 +2482,7 @@ _EOF_
 		{
 			local alt='nft'
 			iptables-nft -L &> /dev/null || alt='legacy'
+			alt='nft' # adsb.im: force nft for docker (not sure why this doesn't work out of the box .. whatever)
 			G_EXEC update-alternatives --set iptables "/usr/sbin/iptables-$alt"
 			G_EXEC update-alternatives --set ip6tables "/usr/sbin/ip6tables-$alt"
 		}
