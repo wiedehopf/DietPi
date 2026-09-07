@@ -10,7 +10,12 @@ ADD_PKGS=()
 # to avoid installing them on first bootk, install them here during build
 [[ $G_HW_MODEL == [45] ]] && ADD_PKGS=(binutils binutils-aarch64-linux-gnu binutils-common libbinutils libctf-nobfd0 libctf0 libgprofng0 libjansson4 libpci3 pci.ids pciutils python3-pycryptodome rpi-eeprom)
 # install various adsb.im dependencies
-apt-get install -y --no-install-recommends acpid jq zstd netcat-openbsd python3 python3-flask python3-requests git librtlsdr0 rtl-sdr hostapd isc-dhcp-server less avahi-utils "${ADD_PKGS[@]}"
+apt-get install -y --no-install-recommends \
+    acpid jq zstd netcat-openbsd \
+    python3 python3-flask python3-requests python3-cryptography \
+    git librtlsdr0 rtl-sdr \
+    hostapd isc-dhcp-server \
+    less avahi-utils "${ADD_PKGS[@]}"
 
 # configure the power button to perform a clean shutdown
 cat > /etc/acpi/events/power_button <<EOF
